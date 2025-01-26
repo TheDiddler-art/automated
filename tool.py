@@ -298,23 +298,13 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
         
+        # First setup
         commands = [
-            # First disable everything
             "su -c 'svc wifi disable'",
             "su -c 'settings put global wifi_ap_state 0'",
-            
-            # Set AP configuration
             "su -c 'settings put global wifi_ap_band 2'",
             "su -c 'settings put global wifi_ap_passwd 12345678'",
             "su -c 'settings put global wifi_ap_ssid Evil_Twin'",
-            
-            # Try different intent methods
-            "su -c 'am start -n com.android.settings/.TetherSettings'",
-            "su -c 'am start -a android.intent.action.MAIN -n com.android.settings/.TetherSettings'",
-            
-            # Force enable through settings
-            "su -c 'settings put global wifi_ap_state 1'",
-            "su -c 'svc wifi enable'",
         ]
         
         for cmd in commands:
@@ -322,16 +312,29 @@ def create_multiple_aps(interface):
             os.system(cmd)
             time.sleep(1)
         
-        print(f"{Fore.CYAN}[i] The settings page should open.{Fore.RESET}")
-        print(f"{Fore.CYAN}[i] Please toggle the hotspot switch manually.{Fore.RESET}")
-        print(f"{Fore.CYAN}[i] After that, the script will be able to control it.{Fore.RESET}")
+        # Open settings and wait for manual toggle
+        print(f"{Fore.CYAN}[i] Opening hotspot settings...{Fore.RESET}")
+        os.system("su -c 'am start -n com.android.settings/.TetherSettings'")
         
-        # Wait for user to enable manually first time
-        input(f"{Fore.YELLOW}[?] Press Enter after enabling hotspot manually...{Fore.RESET}")
+        print(f"{Fore.CYAN}[i] 1. Toggle hotspot ON{Fore.RESET}")
+        print(f"{Fore.CYAN}[i] 2. Wait for it to start{Fore.RESET}")
+        print(f"{Fore.CYAN}[i] 3. Toggle it OFF{Fore.RESET}")
+        print(f"{Fore.CYAN}[i] 4. Press Enter{Fore.RESET}")
         
-        # Now we can try to control it
-        print(f"{Fore.GREEN}[+] Trying to take control...{Fore.RESET}")
+        input(f"{Fore.YELLOW}[?] Press Enter after completing steps...{Fore.RESET}")
+        
+        # Now try automated control
+        print(f"{Fore.GREEN}[+] Attempting automated control...{Fore.RESET}")
         os.system("su -c 'settings put global wifi_ap_state 1'")
+        time.sleep(2)
+        
+        # Verify if it worked
+        result = os.popen("su -c 'settings get global wifi_ap_state'").read().strip()
+        if result == "1":
+            print(f"{Fore.GREEN}[+] Successfully enabled hotspot!{Fore.RESET}")
+        else:
+            print(f"{Fore.RED}[-] Failed to enable hotspot automatically.{Fore.RESET}")
+            print(f"{Fore.YELLOW}[*] You may need to control it manually.{Fore.RESET}")
         
         while True:
             time.sleep(1)

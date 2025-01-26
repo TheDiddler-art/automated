@@ -1125,7 +1125,7 @@ def setup_environment(platform):
             print(f"{Fore.RED}[!] Missing packages. Run:")
             print("sudo apt install python3-bluetooth{Fore.RESET}")
 
-def setup_termux_environment():
+def check_and_install_termux_dependencies():
     print(f"\n{Fore.BLUE}[*] Setting up Termux Environment{Fore.RESET}")
     try:
         # Core packages
@@ -1611,59 +1611,6 @@ def check_root():
         print(f"[!] Then: python automated.py{Fore.RESET}")
         return False
     return True
-
-def check_and_install_termux_dependencies():
-    print(f"\n{Fore.BLUE}[*] Checking and Installing Termux Dependencies{Fore.RESET}")
-    
-    # Required packages dictionary
-    packages = {
-        "core": ["python", "git", "root-repo"],
-        "network": ["nmap", "wireless-tools", "tcpdump", "macchanger"],
-        "wifi": ["aircrack-ng", "mdk3", "dnsmasq"],
-        "bluetooth": ["python-dev", "libbluetooth", "bluetooth"],
-        "python_pkgs": ["python-nmap", "colorama", "requests", "scapy", "pybluez"]
-    }
-    
-    try:
-        # Check if running in Termux
-        if "termux" not in os.environ.get("PREFIX", ""):
-            print(f"{Fore.RED}[!] Not running in Termux environment{Fore.RESET}")
-            return False
-            
-        # Update package list first
-        print(f"{Fore.YELLOW}[+] Updating package lists...{Fore.RESET}")
-        os.system("pkg update -y && pkg upgrade -y")
-        
-        # Install packages by category
-        for category, pkg_list in packages.items():
-            print(f"\n{Fore.YELLOW}[+] Installing {category} packages...{Fore.RESET}")
-            
-            if category == "python_pkgs":
-                for pkg in pkg_list:
-                    try:
-                        __import__(pkg)
-                        print(f"{Fore.GREEN}[✓] {pkg} already installed{Fore.RESET}")
-                    except ImportError:
-                        print(f"{Fore.YELLOW}[+] Installing {pkg}...{Fore.RESET}")
-                        os.system(f"pip install {pkg}")
-            else:
-                for pkg in pkg_list:
-                    if os.system(f"which {pkg} > /dev/null 2>&1") != 0:
-                        print(f"{Fore.YELLOW}[+] Installing {pkg}...{Fore.RESET}")
-                        os.system(f"pkg install -y {pkg}")
-                    else:
-                        print(f"{Fore.GREEN}[✓] {pkg} already installed{Fore.RESET}")
-        
-        # Setup storage
-        print(f"\n{Fore.YELLOW}[+] Setting up storage access...{Fore.RESET}")
-        os.system("termux-setup-storage")
-        
-        print(f"\n{Fore.GREEN}[✓] All dependencies installed!{Fore.RESET}")
-        return True
-        
-    except Exception as e:
-        print(f"{Fore.RED}[-] Setup failed: {str(e)}{Fore.RESET}")
-        return False
 
 def main():
     # Initialize colorama

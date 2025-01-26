@@ -298,17 +298,44 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
         
-        # Create AP using create_ap
-        ap_command = f"proot-distro login ubuntu -- create_ap {interface} {interface} Evil_Twin 12345678"
-        print(f"{Fore.YELLOW}[*] Running: {ap_command}{Fore.RESET}")
-        os.system(ap_command)
+        # Create hostapd configuration
+        hostapd_conf = f"""
+interface={interface}
+driver=nl80211
+ssid=Evil_Twin
+hw_mode=g
+channel=6
+macaddr_acl=0
+auth_algs=1
+ignore_broadcast_ssid=0
+wpa=2
+wpa_passphrase=12345678
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP
+rsn_pairwise=CCMP
+"""
+        # Write config
+        with open('/tmp/hostapd.conf', 'w') as f:
+            f.write(hostapd_conf)
+        
+        # Start DHCP server
+        os.system("service dnsmasq start")
+        
+        # Configure interface
+        os.system(f"ifconfig {interface} up 192.168.1.1 netmask 255.255.255.0")
+        os.system("echo 1 > /proc/sys/net/ipv4/ip_forward")
+        
+        print(f"{Fore.GREEN}[+] Starting hostapd...{Fore.RESET}")
+        os.system(f"hostapd /tmp/hostapd.conf")
         
         while True:
             time.sleep(1)
             
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Stopping AP...{Fore.RESET}")
-        os.system("proot-distro login ubuntu -- create_ap --stop {interface}")
+        os.system("killall hostapd")
+        os.system("service dnsmasq stop")
+        os.system(f"ifconfig {interface} down")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

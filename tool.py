@@ -298,44 +298,56 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
         
-        # Create hostapd configuration
+        # First kill any processes that might interfere
+        os.system("killall hostapd dnsmasq 2>/dev/null")
+        os.system("rfkill unblock wifi")  # Unblock wifi if blocked
+        
+        # Properly initialize the interface
+        setup_commands = [
+            f"ip link set {interface} down",
+            "rmmod -f mac80211_hwsim 2>/dev/null",
+            f"iw dev {interface} set type managed",
+            f"ip link set {interface} up",
+            f"ip addr flush dev {interface}",
+            f"ip addr add 192.168.1.1/24 dev {interface}"
+        ]
+        
+        for cmd in setup_commands:
+            print(f"{Fore.YELLOW}[*] Running: {cmd}{Fore.RESET}")
+            os.system(cmd)
+            time.sleep(1)  # Give system time to process each command
+            
+        # Create hostapd config
         hostapd_conf = f"""
 interface={interface}
 driver=nl80211
 ssid=Evil_Twin
 hw_mode=g
 channel=6
-macaddr_acl=0
-auth_algs=1
 ignore_broadcast_ssid=0
+auth_algs=1
 wpa=2
 wpa_passphrase=12345678
 wpa_key_mgmt=WPA-PSK
-wpa_pairwise=TKIP
+wpa_pairwise=CCMP
 rsn_pairwise=CCMP
 """
-        # Write config
         with open('/tmp/hostapd.conf', 'w') as f:
             f.write(hostapd_conf)
         
-        # Start DHCP server
-        os.system("service dnsmasq start")
-        
-        # Configure interface
-        os.system(f"ifconfig {interface} up 192.168.1.1 netmask 255.255.255.0")
-        os.system("echo 1 > /proc/sys/net/ipv4/ip_forward")
-        
         print(f"{Fore.GREEN}[+] Starting hostapd...{Fore.RESET}")
-        os.system(f"hostapd /tmp/hostapd.conf")
+        os.system(f"hostapd -d /tmp/hostapd.conf")  # Added -d for debug output
         
-        while True:
-            time.sleep(1)
-            
     except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}[*] Stopping AP...{Fore.RESET}")
-        os.system("killall hostapd")
-        os.system("service dnsmasq stop")
-        os.system(f"ifconfig {interface} down")
+        print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
+        cleanup_commands = [
+            "killall hostapd dnsmasq",
+            f"ip link set {interface} down",
+            f"iw dev {interface} set type managed",
+            f"ip link set {interface} up"
+        ]
+        for cmd in cleanup_commands:
+            os.system(cmd)
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

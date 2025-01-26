@@ -7,11 +7,11 @@ import netifaces
 import scapy.all as scapy
 from scapy.layers import http
 import time
-from scapy.layers.dns import DNSQR, DNSRR
+from scapy.layers.dns import DNSQR, DNSRR, DNS
 from scapy.layers.l2 import ARP
 from scapy.layers.inet import IP, UDP
-from scapy.layers.nfqueue import NetfilterQueue
 import random
+import netfilterqueue
 
 def check_platform():
     if platform.system() == "Windows":

@@ -13,7 +13,7 @@ def install_termux_requirements():
         
         # Python and dev tools
         "pkg install -y python",
-        "pkg install -y python-dev",
+        "pkg install -y python-static",
         "pkg install -y git",
         
         # Network tools

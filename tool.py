@@ -299,19 +299,24 @@ def create_multiple_aps(interface):
         print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
         
         commands = [
-            # Disable WiFi first
+            # Stop existing tethering
             "su -c 'svc wifi disable'",
-            "su -c 'settings put global wifi_scan_always_enabled 0'",
             
-            # Set exact settings we found
+            # Configure tethering through networkstack
+            "su -c 'am broadcast -a android.intent.action.TETHER_STATE_CHANGED --ei wifi_state 0'",
+            "su -c 'settings put global tether_dun_required 0'",
+            
+            # Set AP config
             "su -c 'settings put global wifi_ap_band 2'",
             "su -c 'settings put global wifi_ap_passwd 12345678'",
             "su -c 'settings put global wifi_ap_ssid Evil_Twin'",
+            
+            # Start tethering using networkstack
+            "su -c 'am startservice -n com.google.android.networkstack.tethering/.TetheringService --ei wifi_state 1'",
             "su -c 'settings put global wifi_ap_state 1'",
             
-            # Force hotspot state change
-            "su -c 'svc wifi enable'",
-            "su -c 'am broadcast -a android.intent.action.WIFI_AP_STATE_CHANGED --ei wifi_state 13'",
+            # Force tether state
+            "su -c 'am broadcast -a android.intent.action.TETHER_STATE_CHANGED --ei wifi_state 1'",
         ]
         
         for cmd in commands:
@@ -327,8 +332,8 @@ def create_multiple_aps(interface):
             
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
+        os.system("su -c 'am broadcast -a android.intent.action.TETHER_STATE_CHANGED --ei wifi_state 0'")
         os.system("su -c 'settings put global wifi_ap_state 0'")
-        os.system("su -c 'svc wifi enable'")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

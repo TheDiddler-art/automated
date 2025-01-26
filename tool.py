@@ -296,26 +296,22 @@ def capture_handshakes(interface):
 
 def create_multiple_aps(interface):
     try:
-        print(f"{Fore.GREEN}[+] Starting AP on MTK device...{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
         
-        # MTK-specific commands for Android 13
         commands = [
             # Disable WiFi first
             "su -c 'svc wifi disable'",
             "su -c 'settings put global wifi_scan_always_enabled 0'",
             
-            # Enable tethering
-            "su -c 'settings put global tether_dun_required 0'",
-            "su -c 'settings put global tether_supported 1'",
-            
-            # Configure hotspot
-            "su -c 'settings put global wifi_ap_ssid \"Evil Twin\"'",
-            "su -c 'settings put global wifi_ap_passwd \"12345678\"'",
-            "su -c 'settings put global wifi_ap_band 2'",  # 2.4GHz
-            
-            # Enable hotspot using MTK commands
-            "su -c 'am broadcast -a android.intent.action.WIFI_AP_STATE_CHANGED --ei wifi_state 13'",
+            # Set exact settings we found
+            "su -c 'settings put global wifi_ap_band 2'",
+            "su -c 'settings put global wifi_ap_passwd 12345678'",
+            "su -c 'settings put global wifi_ap_ssid Evil_Twin'",
             "su -c 'settings put global wifi_ap_state 1'",
+            
+            # Force hotspot state change
+            "su -c 'svc wifi enable'",
+            "su -c 'am broadcast -a android.intent.action.WIFI_AP_STATE_CHANGED --ei wifi_state 13'",
         ]
         
         for cmd in commands:
@@ -324,7 +320,7 @@ def create_multiple_aps(interface):
             time.sleep(1)
         
         print(f"{Fore.GREEN}[+] AP should be created. Check WiFi settings.{Fore.RESET}")
-        print(f"{Fore.GREEN}[+] SSID: Evil Twin, Password: 12345678{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] SSID: Evil_Twin, Password: 12345678{Fore.RESET}")
         
         while True:
             time.sleep(1)
@@ -332,7 +328,6 @@ def create_multiple_aps(interface):
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
         os.system("su -c 'settings put global wifi_ap_state 0'")
-        os.system("su -c 'am broadcast -a android.intent.action.WIFI_AP_STATE_CHANGED --ei wifi_state 11'")
         os.system("su -c 'svc wifi enable'")
 
 def bluetooth_attacks():

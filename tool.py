@@ -298,24 +298,25 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
         
-        # First kill any processes that might interfere
-        os.system("killall hostapd dnsmasq 2>/dev/null")
-        os.system("rfkill unblock wifi")  # Unblock wifi if blocked
+        # Kill interfering processes
+        os.system("killall wpa_supplicant hostapd dnsmasq 2>/dev/null")
         
-        # Properly initialize the interface
+        # Set up interface
         setup_commands = [
             f"ip link set {interface} down",
-            "rmmod -f mac80211_hwsim 2>/dev/null",
-            f"iw dev {interface} set type managed",
+            f"iw dev {interface} set type managed",  # Reset to managed first
             f"ip link set {interface} up",
-            f"ip addr flush dev {interface}",
+            f"iw dev {interface} set type __ap",     # Set to AP mode
             f"ip addr add 192.168.1.1/24 dev {interface}"
         ]
         
         for cmd in setup_commands:
             print(f"{Fore.YELLOW}[*] Running: {cmd}{Fore.RESET}")
-            os.system(cmd)
-            time.sleep(1)  # Give system time to process each command
+            result = os.system(cmd)
+            if result != 0:
+                print(f"{Fore.RED}[!] Command failed: {cmd}{Fore.RESET}")
+                return
+            time.sleep(1)
             
         # Create hostapd config
         hostapd_conf = f"""
@@ -323,25 +324,27 @@ interface={interface}
 driver=nl80211
 ssid=Evil_Twin
 hw_mode=g
-channel=6
-ignore_broadcast_ssid=0
+channel=1
+country_code=US
+ieee80211d=1
+ieee80211n=1
+wmm_enabled=1
 auth_algs=1
 wpa=2
 wpa_passphrase=12345678
 wpa_key_mgmt=WPA-PSK
-wpa_pairwise=CCMP
 rsn_pairwise=CCMP
 """
         with open('/tmp/hostapd.conf', 'w') as f:
             f.write(hostapd_conf)
         
         print(f"{Fore.GREEN}[+] Starting hostapd...{Fore.RESET}")
-        os.system(f"hostapd -d /tmp/hostapd.conf")  # Added -d for debug output
+        os.system(f"hostapd -dd /tmp/hostapd.conf")  # Added more debug output
         
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
         cleanup_commands = [
-            "killall hostapd dnsmasq",
+            "killall hostapd wpa_supplicant dnsmasq",
             f"ip link set {interface} down",
             f"iw dev {interface} set type managed",
             f"ip link set {interface} up"

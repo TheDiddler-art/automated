@@ -120,6 +120,7 @@ Bluetooth:
 - Follow local laws
 - Maintain security
 - Document activities
+- The Author is not eligible for the things you caused.
 
 DETAILED ATTACK EXPLANATIONS
 ==========================

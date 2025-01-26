@@ -6,34 +6,68 @@ def install_termux_requirements():
     print(f"\n{Fore.BLUE}[*] Installing Termux Requirements{Fore.RESET}")
     
     pkg_commands = [
+        # Core updates
         "pkg update -y",
         "pkg upgrade -y",
         "pkg install -y root-repo",
+        
+        # Python and dev tools
         "pkg install -y python",
-        "pkg install -y nmap",
         "pkg install -y python-dev",
+        "pkg install -y git",
+        
+        # Network tools
+        "pkg install -y nmap",          # System nmap tool
         "pkg install -y wireless-tools",
+        "pkg install -y tcpdump",
+        "pkg install -y netcat",
+        "pkg install -y openssh",
+        
+        # WiFi tools
+        "pkg install -y aircrack-ng",
+        "pkg install -y mdk3",
+        "pkg install -y macchanger",
+        "pkg install -y dnsmasq",
+        "pkg install -y hostapd",  
+        "pkg install -y iptables",
+        
+        # Web tools
         "pkg install -y hydra",
         "pkg install -y gobuster",
-        "pkg install -y aircrack-ng",
-        "pkg install -y tcpdump",
-        "pkg install -y macchanger",
-        "pkg install -y mdk3",
-        "pkg install -y dnsmasq",
+        "pkg install -y sqlmap",
+        
+        # Bluetooth tools
         "pkg install -y libbluetooth",
-        "pkg install -y bluetooth"
+        "pkg install -y bluetooth",
+        "pkg install -y bluez",
+        
+        # Additional utils
+        "pkg install -y tsu",     
+        "pkg install -y wget",
+        "pkg install -y curl"
     ]
     
     pip_commands = [
         "pip install --upgrade pip",
-        "pip install python-nmap",
-        "pip install colorama",
-        "pip install requests",
+        # Network modules
+        "pip install python-nmap",      # Python nmap module
         "pip install scapy",
-        "pip install pybluez",
-        "pip install dnspython",
+        "pip install netfilterqueue",
+        
+        # Web modules
+        "pip install requests",
         "pip install paramiko",
-        "pip install cryptography"
+        "pip install dnspython",
+        
+        # Bluetooth modules
+        "pip install pybluez",
+        "pip install bleak",
+        
+        # Utils
+        "pip install colorama",
+        "pip install cryptography",
+        "pip install python-dateutil",
+        "pip install netifaces"
     ]
     
     try:

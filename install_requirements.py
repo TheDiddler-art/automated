@@ -22,6 +22,7 @@ def install_termux_requirements():
         "pkg install -y python-static",
         "pkg install -y git",
         "pkg install -y python-pip",
+        "pkg install -y python-setuptools",
         
         # Network tools
         "pkg install -y nmap",
@@ -37,6 +38,9 @@ def install_termux_requirements():
     ]
     
     pip_commands = [
+        # Core Python packages
+        "pip install setuptools",
+        
         # Network modules
         "pip install python-nmap",
         "pip install scapy",

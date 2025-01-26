@@ -31,8 +31,13 @@ from scapy.layers.dot11 import Dot11, Dot11Beacon, Dot11Deauth, RadioTap
 try:
     import bluetooth
 except ImportError:
-    import bleak as bluetooth_alt
-    import asyncio
+    try:
+        # Try alternate bluetooth library
+        import bleak as bluetooth
+    except ImportError:
+        bluetooth = None
+        print(f"{Fore.YELLOW}[!] Bluetooth libraries not available")
+        print(f"[!] Bluetooth features will be disabled{Fore.RESET}")
 
 def check_requirements():
     print(f"{Fore.BLUE}[*] Checking and installing requirements...{Fore.RESET}")
@@ -1033,7 +1038,7 @@ async def run_bluetooth_scan_windows():
     print(f"{Fore.YELLOW}[+] Scanning for nearby devices...{Fore.RESET}\n")
     
     try:
-        scanner = bluetooth_alt.BleakScanner()
+        scanner = bluetooth.BleakScanner()
         devices = await scanner.discover()
         
         print(f"{Fore.GREEN}[+] Found {len(devices)} devices:{Fore.RESET}")
@@ -1055,7 +1060,7 @@ async def run_bluetooth_scan_windows():
 
 async def connect_to_device(address):
     try:
-        device = bluetooth_alt.BleakClient(address)
+        device = bluetooth.BleakClient(address)
         await device.connect()
         print(f"{Fore.GREEN}[+] Connected to {address}{Fore.RESET}")
         services = await device.get_services()
@@ -1067,12 +1072,18 @@ async def connect_to_device(address):
         print(f"{Fore.RED}[-] Connection failed: {e}{Fore.RESET}")
 
 def run_bluetooth_attacks():
-    if os.name == 'nt':  # Windows
-        asyncio.run(run_bluetooth_scan_windows())
-    else:  # Linux/Termux
-        # Original bluetooth code here
-        import bluetooth
-        # ... rest of the original code ...
+    if not check_bluetooth_available():
+        print(f"{Fore.RED}[!] Bluetooth features not available")
+        print(f"[!] Install bluetooth support first:{Fore.RESET}")
+        print("pkg install python-dev libbluetooth bluetooth")
+        print("pip install pybluez")
+        return False
+    
+    # Rest of bluetooth code...
+
+def check_bluetooth_available():
+    """Check if bluetooth functionality is available"""
+    return bluetooth is not None
 
 def check_os():
     print(f"\n{Fore.GREEN}=== Platform Selection ==={Fore.RESET}")
@@ -1601,23 +1612,76 @@ def check_root():
         return False
     return True
 
+def check_and_install_termux_dependencies():
+    print(f"\n{Fore.BLUE}[*] Checking and Installing Termux Dependencies{Fore.RESET}")
+    
+    # Required packages dictionary
+    packages = {
+        "core": ["python", "git", "root-repo"],
+        "network": ["nmap", "wireless-tools", "tcpdump", "macchanger"],
+        "wifi": ["aircrack-ng", "mdk3", "dnsmasq"],
+        "bluetooth": ["python-dev", "libbluetooth", "bluetooth"],
+        "python_pkgs": ["python-nmap", "colorama", "requests", "scapy", "pybluez"]
+    }
+    
+    try:
+        # Check if running in Termux
+        if "termux" not in os.environ.get("PREFIX", ""):
+            print(f"{Fore.RED}[!] Not running in Termux environment{Fore.RESET}")
+            return False
+            
+        # Update package list first
+        print(f"{Fore.YELLOW}[+] Updating package lists...{Fore.RESET}")
+        os.system("pkg update -y && pkg upgrade -y")
+        
+        # Install packages by category
+        for category, pkg_list in packages.items():
+            print(f"\n{Fore.YELLOW}[+] Installing {category} packages...{Fore.RESET}")
+            
+            if category == "python_pkgs":
+                for pkg in pkg_list:
+                    try:
+                        __import__(pkg)
+                        print(f"{Fore.GREEN}[✓] {pkg} already installed{Fore.RESET}")
+                    except ImportError:
+                        print(f"{Fore.YELLOW}[+] Installing {pkg}...{Fore.RESET}")
+                        os.system(f"pip install {pkg}")
+            else:
+                for pkg in pkg_list:
+                    if os.system(f"which {pkg} > /dev/null 2>&1") != 0:
+                        print(f"{Fore.YELLOW}[+] Installing {pkg}...{Fore.RESET}")
+                        os.system(f"pkg install -y {pkg}")
+                    else:
+                        print(f"{Fore.GREEN}[✓] {pkg} already installed{Fore.RESET}")
+        
+        # Setup storage
+        print(f"\n{Fore.YELLOW}[+] Setting up storage access...{Fore.RESET}")
+        os.system("termux-setup-storage")
+        
+        print(f"\n{Fore.GREEN}[✓] All dependencies installed!{Fore.RESET}")
+        return True
+        
+    except Exception as e:
+        print(f"{Fore.RED}[-] Setup failed: {str(e)}{Fore.RESET}")
+        return False
+
 def main():
-    if not check_root():
-        sys.exit(1)
-    init()  # Initialize colorama
+    # Initialize colorama
+    init()
+    
     print(f"\n{Fore.RED}[!] For educational purposes only. Use responsibly.{Fore.RESET}")
     
-    # Initialize results dictionary
-    results = {}
+    # Check and install dependencies first
+    if not check_and_install_termux_dependencies():
+        print(f"{Fore.RED}[!] Failed to setup environment. Exiting...{Fore.RESET}")
+        sys.exit(1)
     
-    # Platform selection
-    platform = check_os()
-    setup_environment(platform)
+    # Check root access
+    if os.geteuid() != 0:
+        print(f"{Fore.YELLOW}[!] Not running as root. Some features will be limited.")
+        print(f"[!] Run 'pkg install tsu && tsu' for full functionality{Fore.RESET}")
     
-    # Get target if needed
-    target = input(f"\n{Fore.CYAN}Enter target IP/Host (or press Enter for local attacks): {Fore.RESET}")
-    
-    # ... rest of the main function ...
+    # Rest of your main code...
 
 if __name__ == "__main__":
     main() 

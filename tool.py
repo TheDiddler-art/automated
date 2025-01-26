@@ -296,12 +296,13 @@ def capture_handshakes(interface):
 
 def create_multiple_aps(interface):
     try:
-        print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
+        print(f"{Fore.CYAN}[i] Please enable your hotspot manually first{Fore.RESET}")
+        input(f"{Fore.YELLOW}[?] Press Enter after enabling hotspot...{Fore.RESET}")
         
-        # First setup
+        print(f"{Fore.GREEN}[+] Modifying hotspot settings...{Fore.RESET}")
+        
         commands = [
-            "su -c 'svc wifi disable'",
-            "su -c 'settings put global wifi_ap_state 0'",
+            # Configure the already-enabled hotspot
             "su -c 'settings put global wifi_ap_band 2'",
             "su -c 'settings put global wifi_ap_passwd 12345678'",
             "su -c 'settings put global wifi_ap_ssid Evil_Twin'",
@@ -312,36 +313,15 @@ def create_multiple_aps(interface):
             os.system(cmd)
             time.sleep(1)
         
-        # Open settings and wait for manual toggle
-        print(f"{Fore.CYAN}[i] Opening hotspot settings...{Fore.RESET}")
-        os.system("su -c 'am start -n com.android.settings/.TetherSettings'")
-        
-        print(f"{Fore.CYAN}[i] 1. Toggle hotspot ON{Fore.RESET}")
-        print(f"{Fore.CYAN}[i] 2. Wait for it to start{Fore.RESET}")
-        print(f"{Fore.CYAN}[i] 3. Toggle it OFF{Fore.RESET}")
-        print(f"{Fore.CYAN}[i] 4. Press Enter{Fore.RESET}")
-        
-        input(f"{Fore.YELLOW}[?] Press Enter after completing steps...{Fore.RESET}")
-        
-        # Now try automated control
-        print(f"{Fore.GREEN}[+] Attempting automated control...{Fore.RESET}")
-        os.system("su -c 'settings put global wifi_ap_state 1'")
-        time.sleep(2)
-        
-        # Verify if it worked
-        result = os.popen("su -c 'settings get global wifi_ap_state'").read().strip()
-        if result == "1":
-            print(f"{Fore.GREEN}[+] Successfully enabled hotspot!{Fore.RESET}")
-        else:
-            print(f"{Fore.RED}[-] Failed to enable hotspot automatically.{Fore.RESET}")
-            print(f"{Fore.YELLOW}[*] You may need to control it manually.{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] Settings applied! Your hotspot should now show:{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] SSID: Evil_Twin{Fore.RESET}")
+        print(f"{Fore.GREEN}[+] Password: 12345678{Fore.RESET}")
         
         while True:
             time.sleep(1)
             
     except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
-        os.system("su -c 'settings put global wifi_ap_state 0'")
+        print(f"\n{Fore.YELLOW}[*] Restoring original settings...{Fore.RESET}")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

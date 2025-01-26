@@ -1644,11 +1644,6 @@ def main():
     
     print(f"\n{Fore.RED}[!] For educational purposes only. Use responsibly.{Fore.RESET}")
     
-    # Check and install dependencies first
-    if not check_and_install_termux_dependencies():
-        print(f"{Fore.RED}[!] Failed to setup environment. Exiting...{Fore.RESET}")
-        sys.exit(1)
-    
     # Check root access
     if os.geteuid() != 0:
         print(f"{Fore.YELLOW}[!] Not running as root. Some features will be limited.")

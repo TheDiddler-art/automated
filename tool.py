@@ -299,24 +299,22 @@ def create_multiple_aps(interface):
         print(f"{Fore.GREEN}[+] Starting AP...{Fore.RESET}")
         
         commands = [
-            # Stop existing tethering
+            # First disable everything
             "su -c 'svc wifi disable'",
+            "su -c 'settings put global wifi_ap_state 0'",
             
-            # Configure tethering through networkstack
-            "su -c 'am broadcast -a android.intent.action.TETHER_STATE_CHANGED --ei wifi_state 0'",
-            "su -c 'settings put global tether_dun_required 0'",
-            
-            # Set AP config
+            # Set AP configuration
             "su -c 'settings put global wifi_ap_band 2'",
             "su -c 'settings put global wifi_ap_passwd 12345678'",
             "su -c 'settings put global wifi_ap_ssid Evil_Twin'",
             
-            # Start tethering using networkstack
-            "su -c 'am startservice -n com.google.android.networkstack.tethering/.TetheringService --ei wifi_state 1'",
-            "su -c 'settings put global wifi_ap_state 1'",
+            # Try different intent methods
+            "su -c 'am start -n com.android.settings/.TetherSettings'",
+            "su -c 'am start -a android.intent.action.MAIN -n com.android.settings/.TetherSettings'",
             
-            # Force tether state
-            "su -c 'am broadcast -a android.intent.action.TETHER_STATE_CHANGED --ei wifi_state 1'",
+            # Force enable through settings
+            "su -c 'settings put global wifi_ap_state 1'",
+            "su -c 'svc wifi enable'",
         ]
         
         for cmd in commands:
@@ -324,15 +322,22 @@ def create_multiple_aps(interface):
             os.system(cmd)
             time.sleep(1)
         
-        print(f"{Fore.GREEN}[+] AP should be created. Check WiFi settings.{Fore.RESET}")
-        print(f"{Fore.GREEN}[+] SSID: Evil_Twin, Password: 12345678{Fore.RESET}")
+        print(f"{Fore.CYAN}[i] The settings page should open.{Fore.RESET}")
+        print(f"{Fore.CYAN}[i] Please toggle the hotspot switch manually.{Fore.RESET}")
+        print(f"{Fore.CYAN}[i] After that, the script will be able to control it.{Fore.RESET}")
+        
+        # Wait for user to enable manually first time
+        input(f"{Fore.YELLOW}[?] Press Enter after enabling hotspot manually...{Fore.RESET}")
+        
+        # Now we can try to control it
+        print(f"{Fore.GREEN}[+] Trying to take control...{Fore.RESET}")
+        os.system("su -c 'settings put global wifi_ap_state 1'")
         
         while True:
             time.sleep(1)
             
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
-        os.system("su -c 'am broadcast -a android.intent.action.TETHER_STATE_CHANGED --ei wifi_state 0'")
         os.system("su -c 'settings put global wifi_ap_state 0'")
 
 def bluetooth_attacks():

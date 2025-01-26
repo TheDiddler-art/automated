@@ -5,80 +5,70 @@ import sys
 def install_termux_requirements():
     print(f"\n{Fore.BLUE}[*] Installing Termux Requirements{Fore.RESET}")
     
+    # First add all required repositories
+    repo_commands = [
+        "pkg install -y root-repo",
+        "pkg install -y unstable-repo",
+        "pkg install -y x11-repo"
+    ]
+    
     pkg_commands = [
         # Core updates
         "pkg update -y",
         "pkg upgrade -y",
-        "pkg install -y root-repo",
         
         # Python and dev tools
         "pkg install -y python",
         "pkg install -y python-static",
         "pkg install -y git",
+        "pkg install -y python-pip",
         
         # Network tools
-        "pkg install -y nmap",          # System nmap tool
+        "pkg install -y nmap",
         "pkg install -y wireless-tools",
         "pkg install -y tcpdump",
         "pkg install -y netcat-openbsd",
         "pkg install -y openssh",
         
-        # WiFi tools
-        "pkg install -y aircrack-ng",
-        "pkg install -y mdk3",
-        "pkg install -y macchanger",
-        "pkg install -y dnsmasq",
-        "pkg install -y hostapd",  
-        "pkg install -y iptables",
-        
-        # Web tools
-        "pkg install -y hydra",
-        "pkg install -y gobuster",
-        "pkg install -y sqlmap",
-        
-        # Bluetooth tools
-        "pkg install -y libbluetooth",
-        "pkg install -y bluetooth",
-        "pkg install -y bluez",
-        
         # Additional utils
-        "pkg install -y tsu",     
+        "pkg install -y tsu",
         "pkg install -y wget",
         "pkg install -y curl"
     ]
     
     pip_commands = [
-        "pip install --upgrade pip",
         # Network modules
-        "pip install python-nmap",      # Python nmap module
+        "pip install python-nmap",
         "pip install scapy",
-        "pip install netfilterqueue",
-        
-        # Web modules
         "pip install requests",
-        "pip install paramiko",
         "pip install dnspython",
-        
-        # Bluetooth modules
-        "pip install pybluez",
-        "pip install bleak",
         
         # Utils
         "pip install colorama",
-        "pip install cryptography",
         "pip install python-dateutil",
         "pip install netifaces"
     ]
     
     try:
+        # First install repositories
+        print(f"{Fore.YELLOW}[+] Adding required repositories...{Fore.RESET}")
+        for cmd in repo_commands:
+            print(f"{Fore.YELLOW}[+] Running: {cmd}{Fore.RESET}")
+            os.system(cmd)
+        
+        # Update after adding repos
+        print(f"{Fore.YELLOW}[+] Updating package lists...{Fore.RESET}")
+        os.system("pkg update -y")
+        
+        # Install packages
         for cmd in pkg_commands:
             print(f"{Fore.YELLOW}[+] Running: {cmd}{Fore.RESET}")
             if os.system(cmd) != 0:
                 print(f"{Fore.RED}[-] Failed: {cmd}")
-                print(f"[-] This package might not be available in your Termux version")
                 print(f"[-] Continuing with other packages...{Fore.RESET}")
                 continue
             
+        # Install Python packages
         for cmd in pip_commands:
             print(f"{Fore.YELLOW}[+] Running: {cmd}{Fore.RESET}")
             if os.system(cmd) != 0:
@@ -86,9 +76,19 @@ def install_termux_requirements():
                 print(f"[-] Continuing with other packages...{Fore.RESET}")
                 continue
                 
-        print(f"{Fore.GREEN}[+] Termux requirements installed!")
-        print(f"[*] Some packages might have failed, but core functionality should work")
-        print(f"[*] Run 'termux-setup-storage' for storage access{Fore.RESET}")
+        print(f"\n{Fore.GREEN}[+] Basic requirements installed!")
+        print(f"\n{Fore.YELLOW}[*] For additional tools, run these commands manually:")
+        print(f"pkg install aircrack-ng")
+        print(f"pkg install hydra")
+        print(f"pkg install sqlmap")
+        print(f"pkg install mdk3")
+        print(f"pkg install hostapd")
+        print(f"\n[*] For Bluetooth tools:")
+        print(f"pkg install bluez")
+        print(f"pkg install libbluetooth")
+        print(f"pkg install bluetooth")
+        print(f"\n[*] Then run:")
+        print(f"termux-setup-storage{Fore.RESET}")
         
     except Exception as e:
         print(f"{Fore.RED}[-] Error: {str(e)}{Fore.RESET}")

